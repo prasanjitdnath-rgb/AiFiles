@@ -15,13 +15,13 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -100,7 +100,7 @@ fun MediaGrid(vm: VM, list: List<Media>) {
 
 fun fmtDur(ms: Long): String { val s = ms / 1000; return "%d:%02d".format(s / 60, s % 60) }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun Viewer(vm: VM, list: List<Media>, start: Int) {
     val ctx = LocalContext.current
@@ -137,7 +137,7 @@ fun Viewer(vm: VM, list: List<Media>, start: Int) {
             Text(cur.name, style = MaterialTheme.typography.titleMedium)
             Text("${Formatter.formatFileSize(ctx, cur.size)} · ${cur.path}", style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(12.dp))
-            if (i == null) Text("Not analysed yet. Open the AI tab and tap “Scan photos”.")
+            if (i == null) Text("Not analysed yet. Open the AI tab and tap “Scan photos” .")
             else {
                 Text("AI labels", style = MaterialTheme.typography.labelLarge)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) { items(i.labels.split(",").filter { it.isNotBlank() }) { AssistChip({}, { Text(it) }) } }
@@ -160,6 +160,7 @@ fun Viewer(vm: VM, list: List<Media>, start: Int) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ZoomImage(m: Media, onZoom: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
