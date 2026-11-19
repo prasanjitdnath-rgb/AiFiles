@@ -32,6 +32,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -283,7 +284,7 @@ fun formatDuration(ms: Long): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun Viewer(vm: VM, list: List<Media>, start: Int) {
     if (list.isEmpty()) {
@@ -430,7 +431,6 @@ fun Viewer(vm: VM, list: List<Media>, start: Int) {
                         Spacer(Modifier.height(4.dp))
                         SelectionContainer { Text(meta.ocr.take(800), style = MaterialTheme.typography.bodyMedium) }
                         TextButton({ clipboard.setText(AnnotatedString(meta.ocr)) }) { Text("Copy text") }
-                    }
                 }
 
                 if (!current.isVideo) {
@@ -463,6 +463,7 @@ fun Viewer(vm: VM, list: List<Media>, start: Int) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ZoomImage(media: Media, onZoom: (Boolean) -> Unit) {
     var scale by remember(media.path) { mutableFloatStateOf(1f) }
