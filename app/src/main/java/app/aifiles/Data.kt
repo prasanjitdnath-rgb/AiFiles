@@ -108,7 +108,6 @@ class Repo(private val ctx: Context) {
 
     private fun files(sel: String?, args: Array<String>?, order: String, limit: Int): List<File> {
         val out = ArrayList<File>()
-        val F = MediaStore.Files.FileColumns
         cr.query(MediaStore.Files.getContentUri("external"), arrayOf("_data"), sel, args, order)?.use { c ->
             while (c.moveToNext() && out.size < limit) {
                 val f = File(c.getString(0) ?: continue)
