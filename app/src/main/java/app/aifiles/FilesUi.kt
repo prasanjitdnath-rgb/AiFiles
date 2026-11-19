@@ -178,8 +178,10 @@ private fun Crumbs(vm: VM) {
     val parts = generateSequence(vm.dir) { if (it == vm.repo.root) null else it.parentFile }.toList().reversed()
     LazyRow(Modifier.padding(horizontal = 12.dp)) {
         items(parts) { p ->
-            TextButton({ vm.dir = p }) { Text(if (p == vm.repo.root) "Internal" else p.name, maxLines = 1) }
-            Text("›", Modifier.align(Alignment.CenterVertically))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton({ vm.dir = p }) { Text(if (p == vm.repo.root) "Internal" else p.name, maxLines = 1) }
+                Text("›")
+            }
         }
     }
 }
