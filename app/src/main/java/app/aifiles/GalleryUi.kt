@@ -73,7 +73,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.text.selection.SelectionContainer
 import coil.compose.AsyncImage
 import java.io.File
 import java.text.DateFormat
@@ -431,6 +430,7 @@ fun Viewer(vm: VM, list: List<Media>, start: Int) {
                         Spacer(Modifier.height(4.dp))
                         SelectionContainer { Text(meta.ocr.take(800), style = MaterialTheme.typography.bodyMedium) }
                         TextButton({ clipboard.setText(AnnotatedString(meta.ocr)) }) { Text("Copy text") }
+                    }
                 }
 
                 if (!current.isVideo) {
