@@ -68,9 +68,10 @@ fun VaultScreen(vm: VM) {
             } else LazyColumn(Modifier.padding(pad)) {
                 items(files, key = { it.path }) { f ->
                     val s = f in sel
-                    ListItem(Modifier.combinedClickable(
-                        onClick = { if (sel.isNotEmpty()) { if (s) sel.remove(f) else sel.add(f) } else if (isPlayable(f)) vm.player = f else openFile(ctx, f) },
-                        onLongClick = { if (!s) sel.add(f) }),
+                    ListItem(
+                        modifier = Modifier.combinedClickable(
+                            onClick = { if (sel.isNotEmpty()) { if (s) sel.remove(f) else sel.add(f) } else if (isPlayable(f)) vm.player = f else openFile(ctx, f) },
+                            onLongClick = { if (!s) sel.add(f) }),
                         colors = ListItemDefaults.colors(containerColor = if (s) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface),
                         leadingContent = {
                             if (s) Icon(Icons.Default.CheckCircle, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
