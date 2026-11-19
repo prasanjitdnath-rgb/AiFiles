@@ -179,7 +179,7 @@ private fun Crumbs(vm: VM) {
     LazyRow(Modifier.padding(horizontal = 12.dp)) {
         items(parts) { p ->
             TextButton({ vm.dir = p }) { Text(if (p == vm.repo.root) "Internal" else p.name, maxLines = 1) }
-            Text("›", Modifier.align(Alignment.CenterVertically))
+            Text("›", Modifier.padding(horizontal = 4.dp))
         }
     }
 }
