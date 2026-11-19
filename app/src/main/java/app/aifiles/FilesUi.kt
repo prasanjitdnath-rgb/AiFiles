@@ -97,7 +97,10 @@ fun FilesTab(vm: VM) {
         floatingActionButton = {
             val d = vm.dir
             if (d != null && vm.clip != null)
-                ExtendedFloatingActionButton({ vm.paste() }, icon = { Icon(Icons.Default.ContentPaste, null) }, text = { Text("Paste (${vm.clip!!.first.size})") })
+                ExtendedFloatingActionButton(
+                    text = { Text("Paste (${vm.clip!!.first.size})") },
+                    icon = { Icon(Icons.Default.ContentPaste, null) },
+                    onClick = { vm.paste() })
             else if (d != null) FloatingActionButton({ dlg = Dlg.NewDir }) { Icon(Icons.Default.CreateNewFolder, null) }
         },
     ) { pad ->

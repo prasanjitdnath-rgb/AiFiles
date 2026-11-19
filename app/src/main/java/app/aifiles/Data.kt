@@ -74,7 +74,7 @@ class Repo(private val ctx: Context) {
         val proj = if (video) {
             arrayOf(
                 MediaStore.MediaColumns._ID,
-                MediaStore.MediaColumns.DATA,
+                "_data",
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.DATE_MODIFIED,
                 "datetaken",
@@ -85,7 +85,7 @@ class Repo(private val ctx: Context) {
         } else {
             arrayOf(
                 MediaStore.MediaColumns._ID,
-                MediaStore.MediaColumns.DATA,
+                "_data",
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.DATE_MODIFIED,
                 "datetaken",
@@ -109,7 +109,7 @@ class Repo(private val ctx: Context) {
     private fun files(sel: String?, args: Array<String>?, order: String, limit: Int): List<File> {
         val out = ArrayList<File>()
         val F = MediaStore.Files.FileColumns
-        cr.query(MediaStore.Files.getContentUri("external"), arrayOf(F.DATA), sel, args, order)?.use { c ->
+        cr.query(MediaStore.Files.getContentUri("external"), arrayOf("_data"), sel, args, order)?.use { c ->
             while (c.moveToNext() && out.size < limit) {
                 val f = File(c.getString(0) ?: continue)
                 if (f.isFile) out += f
@@ -119,11 +119,11 @@ class Repo(private val ctx: Context) {
     }
 
     fun recent(): List<File> = files(
-        "${MediaStore.Files.FileColumns.SIZE}>0 AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/Android/%' AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'",
+        "${MediaStore.Files.FileColumns.SIZE}>0 AND _data NOT LIKE '%/Android/%' AND _data NOT LIKE '%/.%'",
         null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC", 40)
 
     fun byExt(exts: List<String>, limit: Int = 1000): List<File> {
-        val sel = exts.joinToString(" OR ") { "${MediaStore.Files.FileColumns.DATA} LIKE ?" }
+        val sel = exts.joinToString(" OR ") { "_data LIKE ?" }
         return files(sel, exts.map { "%.$it" }.toTypedArray(), "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC", limit)
     }
 
