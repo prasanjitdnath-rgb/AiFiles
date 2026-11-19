@@ -139,8 +139,10 @@ fun FilesTab(vm: VM) {
                     }
                 }
                 item {
-                    ListItem(Modifier.padding(horizontal = 8.dp).clip(RoundedCornerShape(16.dp)).clickable { vm.showVault = true },
-                        leadingContent = { Icon(Icons.Default.Lock, null) }, headlineContent = { Text("Private vault") },
+                    ListItem(
+                        modifier = Modifier.padding(horizontal = 8.dp).clip(RoundedCornerShape(16.dp)).clickable { vm.showVault = true },
+                        leadingContent = { Icon(Icons.Default.Lock, null) },
+                        headlineContent = { Text("Private vault") },
                         supportingContent = { Text("Locked with fingerprint / PIN") })
                 }
                 item { Text("Recent", Modifier.padding(16.dp, 16.dp, 16.dp, 4.dp), style = MaterialTheme.typography.titleMedium) }
