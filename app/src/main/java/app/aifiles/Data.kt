@@ -71,14 +71,37 @@ class Repo(private val ctx: Context) {
     }
 
     private fun read(uri: Uri, video: Boolean, out: MutableList<Media>) {
-        val M = MediaStore.MediaColumns
-        val proj = arrayOf(M._ID, M.DATA, M.DISPLAY_NAME, M.DATE_MODIFIED, M.DATE_TAKEN, M.BUCKET_DISPLAY_NAME, M.SIZE, M.DURATION)
-        cr.query(uri, proj, null, null, "${M.DATE_MODIFIED} DESC")?.use { c ->
+        val proj = if (video) {
+            arrayOf(
+                MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DATA,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+                "datetaken",
+                "bucket_display_name",
+                MediaStore.MediaColumns.SIZE,
+                "duration",
+            )
+        } else {
+            arrayOf(
+                MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DATA,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+                "datetaken",
+                "bucket_display_name",
+                MediaStore.MediaColumns.SIZE,
+            )
+        }
+        cr.query(uri, proj, null, null, "${MediaStore.MediaColumns.DATE_MODIFIED} DESC")?.use { c ->
             while (c.moveToNext()) {
                 val path = c.getString(1) ?: continue
                 val taken = c.getLong(4)
-                out += Media(c.getLong(0), path, c.getString(2) ?: File(path).name, video,
-                    if (taken > 0) taken else c.getLong(3) * 1000, c.getString(5) ?: "", c.getLong(6), c.getLong(7))
+                out += Media(
+                    c.getLong(0), path, c.getString(2) ?: File(path).name, video,
+                    if (taken > 0) taken else c.getLong(3) * 1000,
+                    c.getString(5) ?: "", c.getLong(6), if (video) c.getLong(7) else 0L,
+                )
             }
         }
     }
@@ -95,7 +118,8 @@ class Repo(private val ctx: Context) {
         return out
     }
 
-    fun recent(): List<File> = files("${MediaStore.Files.FileColumns.SIZE}>0 AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/Android/%' AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'",
+    fun recent(): List<File> = files(
+        "${MediaStore.Files.FileColumns.SIZE}>0 AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/Android/%' AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'",
         null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC", 40)
 
     fun byExt(exts: List<String>, limit: Int = 1000): List<File> {
