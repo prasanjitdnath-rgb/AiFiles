@@ -82,8 +82,12 @@ fun AiTab(vm: VM) {
                 Triple("large", "Large files (100 MB+)", Icons.Default.Storage),
                 Triple("shots", "Old screenshots", Icons.Default.Screenshot),
                 Triple("apks", "Installer files (APK)", Icons.Default.Android))) { (k, t, ic) ->
-                ListItem(Modifier.clip(RoundedCornerShape(16.dp)).clickable { section = k },
-                    leadingContent = { Icon(ic, null) }, headlineContent = { Text(t) }, trailingContent = { Icon(Icons.Default.ChevronRight, null) })
+                ListItem(
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { section = k },
+                    leadingContent = { Icon(ic, null) },
+                    headlineContent = { Text(t) },
+                    trailingContent = { Icon(Icons.Default.ChevronRight, null) }
+                )
             }
             item { Text("Smart albums appear in the Gallery tab once photos are scanned.", style = MaterialTheme.typography.bodySmall) }
         }
@@ -120,8 +124,8 @@ private fun CleanScreen(vm: VM, kind: String, onBack: () -> Unit) {
             else -> LazyColumn(Modifier.padding(pad)) {
                 items(list, key = { it.path }) { c ->
                     val f = File(c.path)
-                    ListItem(Modifier.clickable { if (c.path in picked) picked.remove(c.path) else picked.add(c.path) },
-                        leadingContent = { if (isMedia(f)) AsyncImage(f, null, Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop) else Icon(Icons.Default.InsertDriveFile, null, Modifier.size(48.dp)) },
+                    ListItem(modifier = Modifier.clickable { if (c.path in picked) picked.remove(c.path) else picked.add(c.path) },
+                        leadingContent = { if (isMedia(f)) AsyncImage(f, null, Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop) else Icon(Icons.Default.InsertDriveFile, null) },
                         headlineContent = { Text(f.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         supportingContent = { Text("${Formatter.formatFileSize(ctx, c.size)} · ${c.note}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         trailingContent = { Checkbox(c.path in picked, { if (it) picked.add(c.path) else picked.remove(c.path) }) })
