@@ -71,36 +71,41 @@ class Repo(private val ctx: Context) {
     }
 
     private fun read(uri: Uri, video: Boolean, out: MutableList<Media>) {
-        val proj = if (video) {
-            arrayOf(
-                MediaStore.MediaColumns._ID,
-                "_data",
-                MediaStore.MediaColumns.DISPLAY_NAME,
-                MediaStore.MediaColumns.DATE_MODIFIED,
-                "datetaken",
-                "bucket_display_name",
-                MediaStore.MediaColumns.SIZE,
-                "duration",
-            )
-        } else {
-            arrayOf(
-                MediaStore.MediaColumns._ID,
-                "_data",
-                MediaStore.MediaColumns.DISPLAY_NAME,
-                MediaStore.MediaColumns.DATE_MODIFIED,
-                "datetaken",
-                "bucket_display_name",
-                MediaStore.MediaColumns.SIZE,
-            )
-        }
-        cr.query(uri, proj, null, null, "${MediaStore.MediaColumns.DATE_MODIFIED} DESC")?.use { c ->
+        val m = MediaStore.MediaColumns
+        val proj = arrayOf(
+            m._ID,
+            m.DATA,
+            m.DISPLAY_NAME,
+            m.DATE_MODIFIED,
+            m.DATE_TAKEN,
+            m.BUCKET_DISPLAY_NAME,
+            m.SIZE,
+            m.DURATION,
+        )
+        cr.query(uri, proj, null, null, "${m.DATE_MODIFIED} DESC")?.use { c ->
+            val idCol = c.getColumnIndexOrThrow(m._ID)
+            val dataCol = c.getColumnIndexOrThrow(m.DATA)
+            val nameCol = c.getColumnIndex(m.DISPLAY_NAME)
+            val modCol = c.getColumnIndex(m.DATE_MODIFIED)
+            val takenCol = c.getColumnIndex(m.DATE_TAKEN)
+            val bucketCol = c.getColumnIndex(m.BUCKET_DISPLAY_NAME)
+            val sizeCol = c.getColumnIndex(m.SIZE)
+            val durCol = c.getColumnIndex(m.DURATION)
             while (c.moveToNext()) {
-                val path = c.getString(1) ?: continue
-                val taken = c.getLong(4)
+                val path = c.getString(dataCol) ?: continue
+                val file = File(path)
+                if (!file.exists()) continue
+                val taken = if (takenCol >= 0) c.getLong(takenCol) else 0L
+                val modified = if (modCol >= 0) c.getLong(modCol) * 1000 else file.lastModified()
                 out += Media(
-                    c.getLong(0), path, c.getString(2) ?: File(path).name, video,
-                    if (taken > 0) taken else c.getLong(3) * 1000,
-                    c.getString(5) ?: "", c.getLong(6), if (video) c.getLong(7) else 0L,
+                    id = c.getLong(idCol),
+                    path = path,
+                    name = if (nameCol >= 0) c.getString(nameCol) ?: file.name else file.name,
+                    isVideo = video,
+                    dateMs = if (taken > 0) taken else modified,
+                    bucket = if (bucketCol >= 0) c.getString(bucketCol).orEmpty() else file.parentFile?.name.orEmpty(),
+                    size = if (sizeCol >= 0) c.getLong(sizeCol) else file.length(),
+                    durationMs = if (durCol >= 0) c.getLong(durCol) else 0L,
                 )
             }
         }
@@ -108,21 +113,24 @@ class Repo(private val ctx: Context) {
 
     private fun files(sel: String?, args: Array<String>?, order: String, limit: Int): List<File> {
         val out = ArrayList<File>()
-        cr.query(MediaStore.Files.getContentUri("external"), arrayOf("_data"), sel, args, order)?.use { c ->
+        val f = MediaStore.Files.FileColumns
+        cr.query(MediaStore.Files.getContentUri("external"), arrayOf(f.DATA), sel, args, order)?.use { c ->
+            val dataCol = c.getColumnIndex(f.DATA)
+            if (dataCol < 0) return emptyList()
             while (c.moveToNext() && out.size < limit) {
-                val f = File(c.getString(0) ?: continue)
-                if (f.isFile) out += f
+                val path = c.getString(dataCol) ?: continue
+                val file = File(path)
+                if (file.isFile) out += file
             }
         }
         return out
     }
 
-    fun recent(): List<File> = files(
-        "${MediaStore.Files.FileColumns.SIZE}>0 AND _data NOT LIKE '%/Android/%' AND _data NOT LIKE '%/.%'",
+    fun recent(): List<File> = files("${MediaStore.Files.FileColumns.SIZE}>0 AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/Android/%' AND ${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'",
         null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC", 40)
 
     fun byExt(exts: List<String>, limit: Int = 1000): List<File> {
-        val sel = exts.joinToString(" OR ") { "_data LIKE ?" }
+        val sel = exts.joinToString(" OR ") { "${MediaStore.Files.FileColumns.DATA} LIKE ?" }
         return files(sel, exts.map { "%.$it" }.toTypedArray(), "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC", limit)
     }
 
@@ -131,7 +139,8 @@ class Repo(private val ctx: Context) {
 
     fun category(name: String): List<File> = when (name) {
         "Large files" -> large()
-        else -> byExt(Cats.exts[name] ?: emptyList())
+        "Downloads" -> list(File(root, "Download"), hidden = false, sort = "Date").filter { it.isFile }
+        else -> byExt(Cats.exts[name].orEmpty())
     }
 
     fun list(dir: File, hidden: Boolean, sort: String): List<File> {
@@ -151,26 +160,81 @@ class Repo(private val ctx: Context) {
         while (f.exists()) f = File(dir, "$base ($i)$ext").also { i++ }
         return f
     }
-    fun copy(src: File, dir: File) { val d = unique(dir, src.name); src.copyRecursively(d); scan(d) }
-    fun move(src: File, dir: File) {
-        val d = unique(dir, src.name)
-        if (!src.renameTo(d)) { src.copyRecursively(d); src.deleteRecursively() }
-        scan(src, d)
+    fun copy(src: File, dir: File) {
+        if (!src.exists()) return
+        dir.mkdirs()
+        val destination = unique(dir, src.name)
+        if (src.isDirectory) {
+            src.copyRecursively(destination, overwrite = false)
+        } else {
+            src.copyTo(destination, overwrite = false)
+        }
+        scan(destination)
     }
-    fun delete(f: File) { f.deleteRecursively(); scan(f) }
-    fun rename(f: File, name: String): Boolean { val d = File(f.parentFile, name); val ok = !d.exists() && f.renameTo(d); if (ok) scan(f, d); return ok }
-    fun mkdir(dir: File, name: String) = File(dir, name).mkdirs()
+
+    fun move(src: File, dir: File) {
+        if (!src.exists()) return
+        dir.mkdirs()
+        val destination = unique(dir, src.name)
+        val renamed = src.parentFile?.path == dir.path && src.renameTo(destination)
+        if (!renamed) {
+            val copied = runCatching {
+                if (src.isDirectory) src.copyRecursively(destination, overwrite = false) else src.copyTo(destination, overwrite = false)
+            }.isSuccess
+            if (copied) src.deleteRecursively()
+        }
+        scan(src, destination)
+    }
+
+    fun delete(f: File) {
+        if (!f.exists()) return
+        f.deleteRecursively()
+        scan(f)
+    }
+
+    fun rename(f: File, name: String): Boolean {
+        val parent = f.parentFile ?: return false
+        val dest = File(parent, name)
+        if (dest.exists()) return false
+        val ok = f.renameTo(dest)
+        if (ok) scan(f, dest)
+        return ok
+    }
+
+    fun mkdir(dir: File, name: String): Boolean = File(dir, name).mkdirs()
+
     fun zip(files: List<File>, dir: File) {
-        val out = unique(dir, (if (files.size == 1) files[0].nameWithoutExtension else "Archive") + ".zip")
-        ZipOutputStream(out.outputStream().buffered()).use { z ->
-            files.forEach { root ->
-                root.walkTopDown().filter { it.isFile }.forEach { f ->
-                    z.putNextEntry(ZipEntry(f.relativeTo(root.parentFile!!).path)); f.inputStream().use { it.copyTo(z) }; z.closeEntry()
+        if (files.isEmpty()) return
+        dir.mkdirs()
+        val archiveName = (if (files.size == 1) files.first().nameWithoutExtension.ifBlank { "Archive" } else "Archive") + ".zip"
+        val out = unique(dir, archiveName)
+        ZipOutputStream(out.outputStream().buffered()).use { zip ->
+            files.forEach { rootFile ->
+                val baseParent = rootFile.parentFile ?: dir
+                if (rootFile.isDirectory) {
+                    rootFile.walkTopDown().filter { it.isFile }.forEach { file ->
+                        val entryName = file.relativeTo(baseParent).invariantSeparatorsPath
+                        zip.putNextEntry(ZipEntry(entryName))
+                        file.inputStream().use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                } else if (rootFile.isFile) {
+                    zip.putNextEntry(ZipEntry(rootFile.name))
+                    rootFile.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
                 }
             }
         }
         scan(out)
     }
-    fun scan(vararg f: File) = MediaScannerConnection.scanFile(ctx, f.map { it.path }.toTypedArray(), null, null)
-    fun scanPaths(p: List<String>) = MediaScannerConnection.scanFile(ctx, p.toTypedArray(), null, null)
+
+    fun scan(vararg f: File) {
+        val paths = f.map { it.path }.filter { it.isNotBlank() }.toTypedArray()
+        if (paths.isNotEmpty()) MediaScannerConnection.scanFile(ctx, paths, null, null)
+    }
+
+    fun scanPaths(p: List<String>) {
+        val paths = p.filter { it.isNotBlank() }.toTypedArray()
+        if (paths.isNotEmpty()) MediaScannerConnection.scanFile(ctx, paths, null, null)
+    }
 }

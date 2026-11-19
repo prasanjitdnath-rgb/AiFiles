@@ -12,6 +12,8 @@
         android:name=".App"
         android:label="AI Files"
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
+        android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
